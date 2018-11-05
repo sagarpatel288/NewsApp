@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NewsApp</string>
+    <string name="label_no_data">Currently, No data available. Please try after some time.</string>
+    <string name="label_no_internet">Internet connection seems to have some problem.</string>
+    <string name="error_something_went_wrong">Something went wrong. Please try after some time.</string>
+    <string name="cd_news_image">News Article Image</string>
+</resources>
