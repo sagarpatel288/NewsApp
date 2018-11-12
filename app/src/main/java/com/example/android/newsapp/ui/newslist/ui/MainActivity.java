@@ -9,7 +9,6 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Toast;
 
@@ -20,11 +19,14 @@ import com.example.android.newsapp.ui.newslist.adapter.NewsListAdapter;
 import com.example.android.newsapp.ui.newslist.model.News;
 import com.example.android.newsapp.ui.newslist.utils.NewsLoader;
 import com.library.android.common.appconstants.AppConstants;
-import com.library.android.common.utils.LoadMoreScrollListener;
 import com.library.android.common.utils.NetworkUtils;
+import com.library.android.common.utils.RvLoadMoreScrollListener;
 import com.library.android.common.utils.ViewUtils;
 
 import java.util.List;
+
+import static android.util.Log.d;
+import static com.library.android.common.appconstants.AppConstants.TAG;
 
 public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivity
         implements SwipeRefreshLayout.OnRefreshListener, LoaderManager.LoaderCallbacks<List<News>> {
@@ -65,6 +67,13 @@ public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivi
     @Override
     public void handleViews() {
         setRecyclerView();
+        checkNetwork();
+    }
+
+    private void checkNetwork() {
+        if (!NetworkUtils.isNetworkAvailable(this)){
+            showError(getString(R.string.label_no_internet));
+        }
     }
 
     private void setRecyclerView() {
@@ -77,28 +86,39 @@ public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivi
     @Override
     public void setListeners() {
         binding.swipeRefreshRecyclerList.setOnRefreshListener(this);
-        binding.recyclerView.addOnScrollListener(new LoadMoreScrollListener() {
+        binding.recyclerView.addOnScrollListener(new RvLoadMoreScrollListener() {
             @Override
-            public void onEndOfScrollReached(RecyclerView recyclerView) {
+            public void onLoadMore() {
                 if (hasMoreData) {
-                    if (NetworkUtils.isNetworkAvailable(MainActivity.this)) {
-                        if (mLoaderManager != null) {
-                            mLoaderManager.restartLoader(1, null, MainActivity.this);
-                        }
-                    } else if (mNewsListAdapter != null && mNewsListAdapter.getItemCount() > 0) {
-                        Toast.makeText(MainActivity.this, getString(R.string.label_no_internet), Toast.LENGTH_SHORT).show();
-                    } else {
-                        onEmptyData();
-                        showError(getString(R.string.label_no_internet));
-                    }
+                    loadData();
                 }
             }
         });
     }
 
+    private void loadData() {
+        if (NetworkUtils.isNetworkAvailable(MainActivity.this)) {
+            if (mLoaderManager != null) {
+                mLoaderManager.restartLoader(1, null, MainActivity.this);
+            }
+        } else if (mNewsListAdapter != null && mNewsListAdapter.getItemCount() > 0) {
+            setPullToRefresh(false);
+            Toast.makeText(MainActivity.this, getString(R.string.label_no_internet), Toast.LENGTH_SHORT).show();
+        } else {
+            onEmptyData();
+            showError(getString(R.string.label_no_internet));
+        }
+    }
+
     @Override
     public void restoreValues(Bundle savedInstanceState) {
 
+    }
+
+    private void setPullToRefresh(boolean isRefreshing){
+        if (binding.swipeRefreshRecyclerList != null){
+            binding.swipeRefreshRecyclerList.setRefreshing(false);
+        }
     }
 
     @Override
@@ -114,19 +134,20 @@ public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivi
     }
 
     private void onEmptyData() {
+        setPullToRefresh(false);
         ViewUtils.toggleVisibility(View.GONE, binding.recyclerView);
         ViewUtils.toggleVisibility(View.VISIBLE, binding.ctvMsg);
     }
 
     private void showError(String message) {
+        d(TAG, "MainActivity: showError: ");
         ViewUtils.setText(binding.ctvMsg, message);
     }
 
     @Override
     public void onRefresh() {
-        // TODO: 11/4/2018 by sagar  Call API
         binding.swipeRefreshRecyclerList.setRefreshing(true);
-        // Note: 11/4/2018 by sagar  set false in onGetResponse
+        loadData();
     }
 
     @NonNull
@@ -144,8 +165,6 @@ public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivi
 
     @Override
     public void onLoadFinished(@NonNull Loader<List<News>> loader, List<News> newsList) {
-        // TODO: 11/4/2018 by sagar  if list size >= 10; loadMore true, else false
-        binding.swipeRefreshRecyclerList.setRefreshing(false);
         if (newsList != null) {
             if (newsList.size() > 0) {
                 onGetData();
@@ -165,6 +184,7 @@ public class MainActivity extends com.example.android.newsapp.ui.base.BaseActivi
     }
 
     private void onGetData() {
+        setPullToRefresh(false);
         ViewUtils.toggleVisibility(View.VISIBLE, binding.recyclerView);
         ViewUtils.toggleVisibility(View.GONE, binding.ctvMsg);
     }
