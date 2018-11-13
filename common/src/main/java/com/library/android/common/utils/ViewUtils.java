@@ -53,6 +53,7 @@ public final class ViewUtils {
 
     public static void setText(TextView tv, String text) {
         if (tv != null) {
+            tv.setVisibility(View.VISIBLE);
             tv.setText(StringUtils.getDefaultString(text, ""));
         }
     }

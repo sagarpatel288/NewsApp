@@ -6,7 +6,7 @@ public class AppConstants {
     public static final int PAGINATION = 10;
 
     public static final class ItemViewType {
-        public static final int ITEM_PROGRESS = 0;
+        public static final int ITEM_LOADING = 0;
         public static final int ITEM_DATA = 1;
     }
 

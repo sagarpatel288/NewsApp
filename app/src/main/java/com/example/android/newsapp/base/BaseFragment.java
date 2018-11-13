@@ -1,4 +1,4 @@
-package com.example.android.newsapp.ui.base;
+package com.example.android.newsapp.base;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;

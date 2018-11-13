@@ -1,9 +1,9 @@
-package com.example.android.newsapp.ui.newslist.utils;
+package com.example.android.newsapp.newslist.utils;
 
 import android.text.TextUtils;
 
 import com.example.android.newsapp.AppConstants;
-import com.example.android.newsapp.ui.newslist.model.News;
+import com.example.android.newsapp.newslist.model.News;
 
 import org.json.JSONArray;
 import org.json.JSONException;

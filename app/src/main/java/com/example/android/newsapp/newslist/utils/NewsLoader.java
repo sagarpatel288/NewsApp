@@ -1,11 +1,11 @@
-package com.example.android.newsapp.ui.newslist.utils;
+package com.example.android.newsapp.newslist.utils;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.AsyncTaskLoader;
 
-import com.example.android.newsapp.ui.newslist.model.News;
+import com.example.android.newsapp.newslist.model.News;
 
 import java.util.List;
 

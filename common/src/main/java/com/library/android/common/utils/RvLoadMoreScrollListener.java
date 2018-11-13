@@ -28,14 +28,13 @@ public abstract class RvLoadMoreScrollListener extends RecyclerView.OnScrollList
                 mPreviousTotal = totalItemCount;
             }
         }
-        int visibleThreshold = 5;
+        int visibleThreshold = 10;
         if (!mLoading && (totalItemCount - visibleItemCount)
                 <= (firstVisibleItem + visibleThreshold)) {
             // End has been reached
 
-            onLoadMore();
-
             mLoading = true;
+            onLoadMore();
         }
     }
 

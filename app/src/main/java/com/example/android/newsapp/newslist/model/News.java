@@ -1,4 +1,4 @@
-package com.example.android.newsapp.ui.newslist.model;
+package com.example.android.newsapp.newslist.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;

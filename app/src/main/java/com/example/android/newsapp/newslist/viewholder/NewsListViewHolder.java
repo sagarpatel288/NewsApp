@@ -1,4 +1,4 @@
-package com.example.android.newsapp.ui.newslist.viewholder;
+package com.example.android.newsapp.newslist.viewholder;
 
 import android.content.Context;
 import android.support.annotation.NonNull;

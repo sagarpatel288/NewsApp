@@ -1,9 +1,12 @@
-package com.example.android.newsapp.ui.newslist.adapter;
+package com.example.android.newsapp.newslist.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.PorterDuff;
 import android.net.Uri;
+import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,14 +14,19 @@ import android.view.ViewGroup;
 
 import com.example.android.newsapp.R;
 import com.example.android.newsapp.databinding.ItemNewsListBinding;
-import com.example.android.newsapp.ui.newslist.model.News;
-import com.example.android.newsapp.ui.newslist.viewholder.NewsListViewHolder;
+import com.example.android.newsapp.newslist.model.News;
+import com.example.android.newsapp.newslist.viewholder.NewsListViewHolder;
 import com.library.android.common.appconstants.AppConstants;
+import com.library.android.common.databinding.LayoutProgressBinding;
 import com.library.android.common.listeners.Callbacks;
 import com.library.android.common.utils.ViewUtils;
+import com.library.android.common.viewholder.LoadMoreViewHolder;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static android.util.Log.d;
+import static com.library.android.common.appconstants.AppConstants.TAG;
 
 public class NewsListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         implements Callbacks.OnEventCallback {
@@ -40,49 +48,85 @@ public class NewsListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         this.mItemType = mItemType;
     }
 
-    public void addData(List<News> mNewsList) {
-        removeLoadMore();
+    public void addData(List<News> mNewsList, int mPageNumber) {
+//        removeLoadMore();
         setItemType(AppConstants.ItemViewType.ITEM_DATA);
+        if (this.mNewsList == null){
+            this.mNewsList = new ArrayList<>();
+        }
         if (mNewsList != null) {
+            if (mPageNumber == 1){
+                d(TAG, "NewsListAdapter: addData: clearing data for first page reload case");
+                this.mNewsList.clear();
+            }
+            d(TAG, "NewsListAdapter: addData: ");
             this.mNewsList.addAll(mNewsList);
         }
         notifyDataSetChanged();
     }
 
-    private void removeLoadMore() {
+    public void removeLoadMore() {
+        d(TAG, "NewsListAdapter: removeLoadMore: entered");
         // Note: 11/4/2018 by sagar  Proceed only if there is anything to remove
         if (mNewsList != null && mNewsList.size() > 0) {
             // Note: 11/4/2018 by sagar  Only last item that must be progress bar (null item) should be removed
             if (mNewsList.get(mNewsList.size() - 1) == null) {
+                d(TAG, "NewsListAdapter: removeLoadMore: removing last item");
                 mNewsList.remove(mNewsList.size() - 1);
             }
         }
+        notifyDataSetChanged();
     }
 
-    private void addLoadMore() {
-        if (mNewsList != null) {
-            mNewsList.add(null);
+    public void addLoadMore() {
+        if (mNewsList == null) {
+            mNewsList = new ArrayList<>();
         }
+        Runnable runnable = new Runnable() {
+            public void run() {
+                mNewsList.add(null);
+                notifyDataSetChanged();
+            }
+        };
+        Handler handler = new Handler();
+        handler.post(runnable);
     }
 
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
-        View view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_news_list, viewGroup, false);
-        ItemNewsListBinding binding = ItemNewsListBinding.bind(view);
-        return new NewsListViewHolder(view, binding, this);
+        if (i == AppConstants.ItemViewType.ITEM_DATA) {
+            d(TAG, "NewsListAdapter: onCreateViewHolder: item");
+            View view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.item_news_list, viewGroup, false);
+            ItemNewsListBinding binding = ItemNewsListBinding.bind(view);
+            return new NewsListViewHolder(view, binding, this);
+        } else {
+            d(TAG, "NewsListAdapter: onCreateViewHolder: loading");
+            View view = LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.layout_progress, viewGroup, false);
+            LayoutProgressBinding binding = LayoutProgressBinding.bind(view);
+            return new LoadMoreViewHolder(view, binding);
+        }
     }
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
         if (viewHolder instanceof NewsListViewHolder) {
+            d(TAG, "NewsListAdapter: onBindViewHolder: item");
             NewsListViewHolder holder = (NewsListViewHolder) viewHolder;
             ItemNewsListBinding binding = holder.mBinding;
             News news = mNewsList.get(i);
-            if (mContext != null && binding != null) {
+            d(TAG, "NewsListAdapter: onBindViewHolder: news: " + news);
+            if (mContext != null && binding != null && news != null) {
                 setTags(holder, binding, i);
                 setData(binding, news, i);
             }
+        } else {
+            d(TAG, "NewsListAdapter: onBindViewHolder: loading");
+            LoadMoreViewHolder loadMoreViewHolder = (LoadMoreViewHolder) viewHolder;
+            LayoutProgressBinding binding = loadMoreViewHolder.mBinding;
+            binding.progressBar.getIndeterminateDrawable().setColorFilter
+                    (ContextCompat.getColor(mContext, R.color.colorPrimary), PorterDuff.Mode.SRC_ATOP);
+            binding.progressBar.setIndeterminate(true);
         }
     }
 
@@ -101,9 +145,10 @@ public class NewsListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     @Override
     public int getItemViewType(int position) {
+        d(TAG, "NewsListAdapter: getItemViewType: " + mNewsList.get(position));
         return mNewsList.get(position) != null
                 ? com.library.android.common.appconstants.AppConstants.ItemViewType.ITEM_DATA
-                : com.library.android.common.appconstants.AppConstants.ItemViewType.ITEM_PROGRESS;
+                : AppConstants.ItemViewType.ITEM_LOADING;
     }
 
     @Override
