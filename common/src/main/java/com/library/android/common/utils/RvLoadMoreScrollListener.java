@@ -23,12 +23,12 @@ public abstract class RvLoadMoreScrollListener extends RecyclerView.OnScrollList
         int firstVisibleItem = ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstVisibleItemPosition();
 
         if (mLoading) {
-            if (totalItemCount > mPreviousTotal) {
+            if (totalItemCount >= mPreviousTotal) {
                 mLoading = false;
                 mPreviousTotal = totalItemCount;
             }
         }
-        int visibleThreshold = 10;
+        int visibleThreshold = 1;
         if (!mLoading && (totalItemCount - visibleItemCount)
                 <= (firstVisibleItem + visibleThreshold)) {
             // End has been reached

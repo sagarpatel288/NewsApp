@@ -4,7 +4,6 @@ import android.databinding.DataBindingUtil;
 import android.graphics.PorterDuff;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.LoaderManager;
@@ -42,10 +41,7 @@ public class MainActivity extends BaseActivity
     private LoaderManager mLoaderManager;
     private int mPageNumber = 1;
     private boolean isLoading;
-
-    public boolean hasMoreData() {
-        return hasMoreData;
-    }
+    private RvLoadMoreScrollListener rvLoadMoreScrollListener;
 
     @Override
     public int getLayoutId() {
@@ -80,12 +76,6 @@ public class MainActivity extends BaseActivity
         checkNetwork();
     }
 
-    private void checkNetwork() {
-        if (!NetworkUtils.isNetworkAvailable(this)){
-            showError(getString(R.string.label_no_internet));
-        }
-    }
-
     private void setRecyclerView() {
         ViewUtils.optimizeRecyclerView(binding.recyclerView);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -93,37 +83,50 @@ public class MainActivity extends BaseActivity
         binding.recyclerView.setAdapter(mNewsListAdapter);
     }
 
+    /*Check network on start of the application and proceed accordingly*/
+    private void checkNetwork() {
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            showError(getString(R.string.label_no_internet));
+        }
+    }
+
     @Override
     public void setListeners() {
         binding.swipeRefreshRecyclerList.setOnRefreshListener(this);
-        binding.recyclerView.addOnScrollListener(new RvLoadMoreScrollListener() {
+        rvLoadMoreScrollListener = new RvLoadMoreScrollListener() {
             @Override
             public void onLoadMore() {
                 if (!isLoading && hasMoreData) {
-                    if (mNewsListAdapter != null){
+                    if (mNewsListAdapter != null) {
                         d(TAG, "MainActivity: onLoadMore: adding load more");
-                        mNewsListAdapter.addLoadMore();
-                    }
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            loadData();
+                        if (NetworkUtils.isNetworkAvailable(MainActivity.this)) {
+                            mNewsListAdapter.addLoadMore();
                         }
-                    };
-                    Handler handler = new Handler();
-                    handler.post(runnable);
+                    }
+                    // Note: 11/14/2018 by sagar  If adding load more, api call, new data, scroll etc...
+                    // messes up things, then call api in separate thread by handler and runnable
+                    loadData();
                     isLoading = true;
                 }
             }
-        });
+        };
+        binding.recyclerView.addOnScrollListener(rvLoadMoreScrollListener);
     }
 
     private void loadData() {
         if (NetworkUtils.isNetworkAvailable(MainActivity.this)) {
             if (mLoaderManager != null) {
                 d(TAG, "MainActivity: loadData: restarting loader");
-                mLoaderManager.restartLoader(1, null, MainActivity.this);
+                // Note: 11/14/2018 by sagar  runOnUiThread because we want immediate response and ui changes based on network state
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mLoaderManager.restartLoader(1, null, MainActivity.this);
+                    }
+                });
             }
         } else if (mNewsListAdapter != null && mNewsListAdapter.getItemCount() > 0) {
+            // Note: 11/14/2018 by sagar  No network, set swipeToRefresh false and proceed next
             setPullToRefresh(false);
             Toast.makeText(MainActivity.this, getString(R.string.label_no_internet), Toast.LENGTH_SHORT).show();
         } else {
@@ -137,12 +140,6 @@ public class MainActivity extends BaseActivity
 
     }
 
-    private void setPullToRefresh(boolean isRefreshing){
-        if (binding.swipeRefreshRecyclerList != null){
-            binding.swipeRefreshRecyclerList.setRefreshing(false);
-        }
-    }
-
     @Override
     public void onGetConnectionState(boolean isConnected) {
         if (!isConnected) {
@@ -152,13 +149,40 @@ public class MainActivity extends BaseActivity
                 onEmptyData();
                 showError(getString(R.string.label_no_internet));
             }
+        } else {
+            if (mNewsListAdapter != null) {
+                // Note: 11/14/2018 by sagar  runOnUiThread because we want immediate response and ui changes based on network state
+                if (mNewsListAdapter.getItemCount() > 0) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mLoaderManager.restartLoader(1, null, MainActivity.this);
+                        }
+                    });
+                } else {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            binding.ctvMsg.setText(getString(R.string.label_pull_to_load_data));
+                        }
+                    });
+                }
+                loadData();
+            }
         }
     }
 
+    /*Method for the case when there is no data somehow*/
     private void onEmptyData() {
-        setPullToRefresh(false);
-        ViewUtils.toggleVisibility(View.GONE, binding.recyclerView);
-        ViewUtils.toggleVisibility(View.VISIBLE, binding.ctvMsg);
+        // Note: 11/14/2018 by sagar  runOnUiThread because we want immediate response and ui changes based on network state
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                setPullToRefresh(false);
+                ViewUtils.toggleVisibility(View.GONE, binding.recyclerView);
+                ViewUtils.toggleVisibility(View.VISIBLE, binding.ctvMsg);
+            }
+        });
     }
 
     private void showError(String message) {
@@ -167,10 +191,18 @@ public class MainActivity extends BaseActivity
         ViewUtils.setText(binding.ctvMsg, message);
     }
 
+    private void setPullToRefresh(boolean isRefreshing) {
+        if (binding.swipeRefreshRecyclerList != null) {
+            binding.swipeRefreshRecyclerList.setRefreshing(isRefreshing);
+        }
+    }
+
     @Override
     public void onRefresh() {
         mPageNumber = 1;
         binding.swipeRefreshRecyclerList.setRefreshing(true);
+        binding.recyclerView.removeOnScrollListener(rvLoadMoreScrollListener);
+        binding.recyclerView.addOnScrollListener(rvLoadMoreScrollListener);
         loadData();
     }
 
@@ -201,18 +233,10 @@ public class MainActivity extends BaseActivity
                     setHasMoreData(false);
                 }
                 mNewsListAdapter.removeLoadMore();
-                // Note: 11/14/2018 by sagar  Forcefully stopping load more
-//                setHasMoreData(false);
-//                mNewsListAdapter.addData(newsList, mPageNumber);
+                // Note: 11/14/2018 by sagar  if removing footer, adding data and scrolling
+                // all at same time gives multiple progressbar, then consider addData in separate thread via handler and runnable+
+                mNewsListAdapter.addData(newsList, mPageNumber);
                 isLoading = false;
-                Runnable runnable = new Runnable() {
-                    public void run() {
-                        mNewsListAdapter.addData(newsList, mPageNumber);
-                    }
-                };
-                Handler handler = new Handler();
-                handler.post(runnable);
-
                 mPageNumber++;
             } else {
                 onEmptyData();

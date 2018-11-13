@@ -4,4 +4,5 @@
     <string name="label_no_internet">Internet connection seems to have some problem.</string>
     <string name="error_something_went_wrong">Something went wrong. Please try after some time.</string>
     <string name="cd_news_image">News Article Image</string>
+    <string name="label_pull_to_load_data">Reconnecting… \nPull to load fresh data</string>
 </resources>

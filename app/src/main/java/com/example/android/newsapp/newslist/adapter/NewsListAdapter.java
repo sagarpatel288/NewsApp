@@ -51,11 +51,11 @@ public class NewsListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     public void addData(List<News> mNewsList, int mPageNumber) {
 //        removeLoadMore();
         setItemType(AppConstants.ItemViewType.ITEM_DATA);
-        if (this.mNewsList == null){
+        if (this.mNewsList == null) {
             this.mNewsList = new ArrayList<>();
         }
         if (mNewsList != null) {
-            if (mPageNumber == 1){
+            if (mPageNumber == 1) {
                 d(TAG, "NewsListAdapter: addData: clearing data for first page reload case");
                 this.mNewsList.clear();
             }
@@ -162,6 +162,14 @@ public class NewsListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         if (news != null && news.getWebUrl() != null) {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(news.getWebUrl()));
             mContext.startActivity(intent);
+        }
+    }
+
+    public void removeLoadMore(Object o) {
+        if (mNewsList != null && mNewsList.size() > 0) {
+            News news = (News) o;
+            mNewsList.remove(news);
+            notifyDataSetChanged();
         }
     }
 }
