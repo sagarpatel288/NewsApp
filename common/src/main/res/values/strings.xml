@@ -22,4 +22,5 @@
     <string name="label_check">Check</string>
     <!--Text on alert dialog [CHAR LIMIT = 15, Single line]-->
     <string name="label_ok">ok</string>
+    <string name="settings">settings</string>
 </resources>
